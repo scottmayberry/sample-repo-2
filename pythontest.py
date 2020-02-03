@@ -8,62 +8,151 @@ r = requests.get(
 print(r.ok)
 print(r.status_code)
 
-text_without_first_comment_string = r.text.replace('<!--', '')
-finalText = text_without_first_comment_string.replace('-->', '')
+comments_removed_text = (r.text.replace('<!--', '')).replace('-->', '')
+
+soup = BeautifulSoup(comments_removed_text, 'html.parser')
 
 
-soup = BeautifulSoup(finalText, 'html.parser')
-score_list_identifier = soup.find(
-    class_='linescore_wrap')
-score_list = score_list_identifier.find_all('td')
+def getBattingStats():
+    """
+    Batting Table 1
+    short id name..........var.contents[0].attrs['data=append-csv']
+    URL....................var.contents[0].contents[x]['href']
+    name...................var.contents[0].contents[x].text
+    at bat.................var.contents[1].contents[0]
+    runs scored/allowed....var.contents[2].contents[0]
+    hits/hits allowed......var.contents[3].contents[0]
+    runs batted in.........var.contents[4].contents[0]
+    bases on balls/walks...var.contents[5].contents[0]
+    strikeouts.............var.contents[6].contents[0]
+    plate appearances......var.contents[7].contents[0]
+    batting average........var.contents[8].contents[0]
+    on base percentage.....var.contents[9].contents[0]
+    SLG....................var.contents[10].contents[0]
+    on-base + slug perc....var.contents[11].contents[0]
+    pitches................var.contents[12].contents[0]
+    strikes................var.contents[13].contents[0]
+    WPA....................var.contents[14].contents[0]
+    aLI....................var.contents[15].contents[0]
+    WPA+...................var.contents[16].contents[0]
+    WPA-...................var.contents[17].contents[0]
+    RE24...................var.contents[18].contents[0]
+    putouts................var.contents[19].contents[0]
+    assists................var.contents[20].contents[0]
+    details................var.contents[21].contents[0]
+    """
+    all_batters = []
+    baseball_table_batter_stats = soup.find_all('tr')
+    for b in baseball_table_batter_stats:
+        # 1st layer filter
+        if(hasattr(b, "contents") and hasattr(b.contents[0], "attrs")):
+            # second layer filter for player detection
+            if('data-stat' in b.contents[0].attrs and b.contents[0].attrs['data-stat'] == 'player'):
+                # filter for batting against team totals and pitching
+                if('data-append-csv' in b.contents[0].attrs and b.contents[1].attrs['data-stat'] == 'AB'):
+                    single_batter = []
+                    single_batter.append(
+                        b.contents[0].attrs['data-append-csv'])
+                    # get url (in different position for some people)
+                    for x in range(0, len(b.contents[0].contents)):
+                        if(hasattr(b.contents[0].contents[x], "attrs")):
+                            single_batter.append(
+                                b.contents[0].contents[x].text)
+                            single_batter.append(
+                                b.contents[0].contents[x].attrs['href'])
+                            break
+                    for i in range(1, len(b.contents)):
+                        if(len(b.contents[i].contents) != 0):
+                            single_batter.append(b.contents[i].contents[0])
+                        else:
+                            single_batter.append("none")
+                    all_batters.append(single_batter)
+    return all_batters
 
 
-baseball_table_1_identifier = soup.find(class_='table_outer_container')
-baseball_table_1_player_stats = soup.find_all('tr')
-for b in baseball_table_1_player_stats:
-    # 1st layer filter
-    if(hasattr(b, "contents") and hasattr(b.contents[0], "attrs")):
-        # second layer filter for player detection
-        if('data-stat' in b.contents[0].attrs and b.contents[0].attrs['data-stat'] == 'player'):
-            # filter for batting against team totals and pitching
-            if('data-append-csv' in b.contents[0].attrs and b.contents[1].attrs['data-stat'] == 'AB'):
-                print(b.contents[0].attrs['data-append-csv'])
-                # get url (in different position for some people)
-                for x in range(0, len(b.contents[0].contents)):
-                    if(hasattr(b.contents[0].contents[x], "attrs")):
-                        print(b.contents[0].contents[x].attrs['href'])
-                        break
-                for i in range(1, len(b.contents)):
-                    if(len(b.contents[i].contents) != 0):
-                        print(b.contents[i].contents[0])
-                    else:
-                        print("none")
-    # b.contents[14].attrs.contents[0]
+def getPitchingStats():
+    all_pitchers = []
+    baseball_table_pitcher_stats = soup.find_all('tr')
+    for b in baseball_table_pitcher_stats:
+        # 1st layer filter
+        if(hasattr(b, "contents") and hasattr(b.contents[0], "attrs")):
+            # second layer filter for player detection
+            if('data-stat' in b.contents[0].attrs and b.contents[0].attrs['data-stat'] == 'player'):
+                # filter for batting against team totals and pitching
+                if('data-append-csv' in b.contents[0].attrs and b.contents[1].attrs['data-stat'] == 'IP'):
+                    single_pitcher = []
+                    single_pitcher.append(
+                        b.contents[0].attrs['data-append-csv'])
+                    # get url (in different position for some people)
+                    for x in range(0, len(b.contents[0].contents)):
+                        if(hasattr(b.contents[0].contents[x], "attrs")):
+                            single_pitcher.append(
+                                b.contents[0].contents[x].text)
+                            single_pitcher.append(
+                                b.contents[0].contents[x].attrs['href'])
+                            break
+                    for i in range(1, len(b.contents)):
+                        if(len(b.contents[i].contents) != 0):
+                            single_pitcher.append(b.contents[i].contents[0])
+                        else:
+                            single_pitcher.append("none")
+                    all_pitchers.append(single_pitcher)
+    return all_pitchers
 
 
-"""
-Batting Table 1
-short id name..........var.contents[0].attrs['data=append-csv']
-URL....................var.contents[0].contents[0]['href']
-at bat.................var.contents[1].attrs.contents[0]
-runs scored/allowed....var.contents[2].attrs.contents[0]
-hits/hits allowed......var.contents[3].attrs.contents[0]
-runs batted in.........var.contents[4].attrs.contents[0]
-bases on balls/walks...var.contents[5].attrs.contents[0]
-strikeouts.............var.contents[6].attrs.contents[0]
-plate appearances......var.contents[7].attrs.contents[0]
-batting average........var.contents[8].attrs.contents[0]
-on base percentage.....var.contents[9].attrs.contents[0]
-SLG....................var.contents[10].attrs.contents[0]
-on-base + slug perc....var.contents[11].attrs.contents[0]
-pitches................var.contents[12].attrs.contents[0]
-strikes................var.contents[13].attrs.contents[0]
-WPA....................var.contents[14].attrs.contents[0]
-aLI....................var.contents[15].attrs.contents[0]
-WPA+...................var.contents[16].attrs.contents[0]
-WPA-...................var.contents[17].attrs.contents[0]
-RE24...................var.contents[18].attrs.contents[0]
-putouts................var.contents[19].attrs.contents[0]
-assists................var.contents[20].attrs.contents[0]
-details................var.contents[21].attrs.contents[0]
-"""
+def getStartingLineups():
+    lineups_final = []
+    lineups_temp = []
+    lineup_table_stats = soup.find_all('table')
+    for lu in lineup_table_stats:
+        # has contents attribute and the length is large enough to be a lineup
+        if(hasattr(lu, "contents") and len(lu.contents) > 10):
+            for x in range(0, len(lu.contents)):
+                if(hasattr(lu.contents[x], "contents")):
+                    single_lineup = []
+                    for y in range(0, len(lu.contents[x])):
+                        if(hasattr(lu.contents[x].contents[y], "contents")):
+                            for j in range(0, len(lu.contents[x].contents[y])):
+                                if(hasattr(lu.contents[x].contents[y].contents[j], "contents")):
+                                    for h in range(0, len(lu.contents[x].contents[y].contents[j])):
+                                        single_lineup.append(
+                                            lu.contents[x].contents[y].contents[j].contents[h])
+                                    single_lineup.append(
+                                        lu.contents[x].contents[y].contents[j].attrs['href'])
+                                else:
+                                    single_lineup.append(
+                                        lu.contents[x].contents[y].contents[j])
+                    lineups_temp.append(single_lineup)
+    lineups_temp = [x for x in lineups_temp if x != []]
+    for x in range(0, len(lineups_temp)):
+        if(lineups_temp[x][0] == '9'):
+            lineups_final.append(lineups_temp[:x+1])
+            lineups_final.append(lineups_temp[x+1:])
+            break
+    return lineups_final
+
+
+def getTeamsAndScores():
+    all_teams = []
+    all_teams_stats = soup.find_all(itemprop='performer')
+    # teams links and names grabbing
+    for x in range(0, len(all_teams_stats)):
+        single_team = []
+        single_team.append(
+            all_teams_stats[x].contents[3].contents[1].attrs['href'])
+        single_team.append(single_team[0].split('/')[2])
+        single_team.append(all_teams_stats[x].contents[3].contents[1].text)
+        all_teams.append(single_team)
+    # scores grabbing
+    all_scores = []
+    all_scores_stats = soup.find_all(class_='score')
+    for x in range(0, len(all_scores_stats)):
+        all_teams[x].append(all_scores_stats[x].text)
+    return all_teams
+
+
+teams = getTeamsAndScores()
+print(teams)
+#battingStats = getBattingStats()
+#pitchingStats = getPitchingStats()
+#startingLineups = getStartingLineups()
