@@ -6,18 +6,6 @@ import os
 import itertools
 print(os.getcwd())
 
-r = requests.get(
-    'https://www.baseball-reference.com/boxes/ARI/ARI201806010.shtml')
-print(r.ok)
-print(r.status_code)
-
-# http://www.parkfactors.com/MLW
-
-
-comments_removed_text = (r.text.replace('<!--', '')).replace('-->', '')
-
-soup = BeautifulSoup(comments_removed_text, 'html.parser')
-
 
 def getBattingStats():
     """
@@ -220,11 +208,19 @@ def getStartTimeWeather():
     #startWeatherLen = len(weather_info_stats)
 
 
-# teams = getTeamsAndScores()
-# print(getPreviousAndNextGameURLs())
+r = requests.get(
+    'https://www.baseball-reference.com/boxes/SLN/SLN201804080.shtml')
+print(r.ok)
+print(r.status_code)
+
+# http://www.parkfactors.com/MLW
+comments_removed_text = (r.text.replace('<!--', '')).replace('-->', '')
+soup = BeautifulSoup(comments_removed_text, 'html.parser')
+print(getTeamsAndScores())
+print(getPreviousAndNextGameURLs())
 print(getScoreboxMeta())
 print(getUmpires())
 print(getStartTimeWeather())
-# battingStats = getBattingStats()
-# pitchingStats = getPitchingStats()
-# startingLineups = getStartingLineups()
+print(getBattingStats())
+print(getPitchingStats())
+print(getStartingLineups())
