@@ -1,12 +1,18 @@
 
 import requests
+import re
 from bs4 import BeautifulSoup, Comment
-
+import os
+import itertools
+print(os.getcwd())
 
 r = requests.get(
     'https://www.baseball-reference.com/boxes/ARI/ARI201806010.shtml')
 print(r.ok)
 print(r.status_code)
+
+# http://www.parkfactors.com/MLW
+
 
 comments_removed_text = (r.text.replace('<!--', '')).replace('-->', '')
 
@@ -144,15 +150,81 @@ def getTeamsAndScores():
         single_team.append(all_teams_stats[x].contents[3].contents[1].text)
         all_teams.append(single_team)
     # scores grabbing
-    all_scores = []
     all_scores_stats = soup.find_all(class_='score')
     for x in range(0, len(all_scores_stats)):
         all_teams[x].append(all_scores_stats[x].text)
     return all_teams
 
 
-teams = getTeamsAndScores()
-print(teams)
-#battingStats = getBattingStats()
-#pitchingStats = getPitchingStats()
-#startingLineups = getStartingLineups()
+def getPreviousAndNextGameURLs():
+    gameURLS = []
+    game_urls_stats = soup.find_all(class_='prevnext')
+    for x in range(0, len(game_urls_stats)):
+        single_gameURLS = [None]*2
+        for y in game_urls_stats[x].contents:
+            if(hasattr(y, "contents")):
+                if(y.text == 'Prev Game'):
+                    single_gameURLS[0] = y.attrs['href']
+                elif(y.text == 'Next Game'):
+                    single_gameURLS[1] = y.attrs['href']
+        gameURLS.append(single_gameURLS)
+    return gameURLS
+
+
+def getScoreboxMeta():
+    metaInfo = []
+    meta_info_state = soup.find_all(class_='scorebox_meta')
+    metaInfo.append(meta_info_state[0].contents[1].text.split(',')[
+                    0])  # day of week
+    metaInfo.append(meta_info_state[0].contents[1].text.split(',')[
+                    1])  # month and day
+    metaInfo.append(meta_info_state[0].contents[1].text.split(',')[
+                    2])  # year
+    metaInfo.append(
+        meta_info_state[0].contents[2].text.split(':', 1)[1].strip().split(' ')[0])  # time
+    metaInfo.append(
+        meta_info_state[0].contents[2].text.split(':', 1)[1].strip().split(' ')[1])  # time
+    metaInfo.append(meta_info_state[0].contents[3].text.split(':')[
+                    1].replace(',', ''))  # attendance
+    metaInfo.append(meta_info_state[0].contents[4].text.split(':')[1])  # field
+    metaInfo.append(meta_info_state[0].contents[5].text.split(
+        ':', 1)[1])  # game duration
+    # night/day game, field type
+    metaInfo.append(meta_info_state[0].contents[6].text.split(',')[0])
+    metaInfo.append(meta_info_state[0].contents[6].text.split(',')[1])
+    for x in range(0, len(metaInfo)):
+        metaInfo[x] = metaInfo[x].strip()
+    return metaInfo
+
+
+def getUmpires():
+    umpires = []
+    meta_info_state = soup.find_all(class_='section_content')
+    umpiresLen = len(meta_info_state[2].contents[1].contents[1].split(','))
+    for x in range(0, umpiresLen):
+        umpires.append(
+            meta_info_state[2].contents[1].contents[1].split(',')[x].split('-')[1].replace('.', '').strip())
+    return umpires
+
+
+def getStartTimeWeather():
+    startWeather = []
+    weather_info_stats = soup.find_all(class_='section_content')
+    weatherLen = len(weather_info_stats[2].contents[6].contents[1].split(','))
+    for x in range(0, weatherLen):
+        startWeather.append(
+            weather_info_stats[2].contents[6].contents[1].split(',')[x].replace('.', '').strip())
+    startWeather[0] = re.findall(r'\d+', startWeather[0])[0]
+    startWeather.append(re.findall(r'\d+', startWeather[1])[0])
+    return startWeather
+    #startWeatherLen = len(weather_info_stats)
+
+
+# teams = getTeamsAndScores()
+# print(getPreviousAndNextGameURLs())
+print(getScoreboxMeta())
+print(getUmpires())
+print(getStartTimeWeather())
+# battingStats = getBattingStats()
+# pitchingStats = getPitchingStats()
+# startingLineups = getStartingLineups()
