@@ -6,6 +6,7 @@ import os
 import itertools
 import csv
 import time
+import math
 print(os.getcwd())
 
 
@@ -46,10 +47,10 @@ def getBattingStats():
             # second layer filter for player detection
             if('data-stat' in b.contents[0].attrs and b.contents[0].attrs['data-stat'] == 'player'):
                 # filter for batting against team totals and pitching
+                if('Team Totals' in b.contents[0].text and len(one_team_batters) > 0):
+                    all_batters.append(one_team_batters.copy())
+                    one_team_batters = []
                 if('data-append-csv' in b.contents[0].attrs and b.contents[1].attrs['data-stat'] == 'AB'):
-                    if(b.contents[0].attrs['csk'] == '0' and len(one_team_batters) > 0):
-                        all_batters.append(one_team_batters.copy())
-                        one_team_batters = []
                     single_batter = []
                     single_batter.append(
                         b.contents[0].attrs['data-append-csv'])
@@ -81,10 +82,10 @@ def getPitchingStats():
             # second layer filter for player detection
             if('data-stat' in b.contents[0].attrs and b.contents[0].attrs['data-stat'] == 'player'):
                 # filter for batting against team totals and pitching
+                if('Team Totals' in b.contents[0].text and len(one_team_pitchers) > 0):
+                    all_pitchers.append(one_team_pitchers.copy())
+                    one_team_pitchers = []
                 if('data-append-csv' in b.contents[0].attrs and b.contents[1].attrs['data-stat'] == 'IP'):
-                    if(b.contents[0].attrs['csk'] == '0' and len(one_team_pitchers) > 0):
-                        all_pitchers.append(one_team_pitchers.copy())
-                        one_team_pitchers = []
                     single_pitcher = []
                     single_pitcher.append(
                         b.contents[0].attrs['data-append-csv'])
@@ -217,6 +218,7 @@ def addToErrorFile(databaseLocation, urlName):
 
 
 databaseLocation = "D:/Baseball/Database/"
+delay_time = 3.2
 
 all_text_file_info = []
 with open('gameURLsOrganizedFrom1998to2015.csv', 'r') as f:
@@ -228,7 +230,9 @@ for x in all_text_file_info:
     counter += 1
     baseball_reference_static = 'https://www.baseball-reference.com'
     request_string = baseball_reference_static + x[2]
+    #request_string = "https://www.baseball-reference.com/boxes/SEA/SEA199803310.shtml"
     print(str(counter) + ": " + request_string)
+    request_time = time.time()
     try:
         r = requests.get(
             request_string)
@@ -258,7 +262,7 @@ for x in all_text_file_info:
         saveFileToCSV(databaseLocation + "Umpires/" + fileNameBase +
                       "_umpires.csv", x[2], [umpires])
         saveFileToCSV(databaseLocation + "Weather/" + fileNameBase +
-                      "_weather.csv", x[2], [startTimeWeather])
+                      "_weather.csv", x[2], [[startTimeWeather]])
         saveFileToCSV(databaseLocation + "startingLineups/" + fileNameBase +
                       "_startingLineups.csv", x[2], startingLineups)
         saveFileToCSV(databaseLocation + "Pitching/" + fileNameBase +
@@ -267,4 +271,6 @@ for x in all_text_file_info:
                       "_batting.csv", x[2], battingStats)
     except:
         addToErrorFile(databaseLocation, request_string)
-    time.sleep(3.5)
+    time_in_between_read = time.time() - request_time
+    if(time_in_between_read < delay_time):
+        time.sleep(delay_time - math.floor(time_in_between_read))
