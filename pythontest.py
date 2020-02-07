@@ -236,8 +236,8 @@ for x in all_text_file_info:
     try:
         r = requests.get(
             request_string)
-        # print(r.ok)
-        # print(r.status_code)
+        print(r.ok)
+        print(r.status_code)
         # http://www.parkfactors.com/MLW
         comments_removed_text = (
             r.text.replace('<!--', '')).replace('-->', '')
@@ -269,6 +269,10 @@ for x in all_text_file_info:
                       "_pitching.csv", x[2], pitchingStats)
         saveFileToCSV(databaseLocation + "Batting/" + fileNameBase +
                       "_batting.csv", x[2], battingStats)
+        with open(databaseLocation + "html/" + fileNameBase +
+                  "_html.txt", "w+", buffering=-1, encoding='utf-8') as f:
+            # print(soup.getText())
+            f.writelines(comments_removed_text)
     except:
         addToErrorFile(databaseLocation, request_string)
     time_in_between_read = time.time() - request_time
