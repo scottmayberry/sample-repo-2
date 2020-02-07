@@ -4,6 +4,8 @@ import re
 from bs4 import BeautifulSoup, Comment
 import os
 import itertools
+import csv
+import time
 print(os.getcwd())
 
 
@@ -36,6 +38,7 @@ def getBattingStats():
     details................var.contents[21].contents[0]
     """
     all_batters = []
+    one_team_batters = []
     baseball_table_batter_stats = soup.find_all('tr')
     for b in baseball_table_batter_stats:
         # 1st layer filter
@@ -44,6 +47,9 @@ def getBattingStats():
             if('data-stat' in b.contents[0].attrs and b.contents[0].attrs['data-stat'] == 'player'):
                 # filter for batting against team totals and pitching
                 if('data-append-csv' in b.contents[0].attrs and b.contents[1].attrs['data-stat'] == 'AB'):
+                    if(b.contents[0].attrs['csk'] == '0' and len(one_team_batters) > 0):
+                        all_batters.append(one_team_batters.copy())
+                        one_team_batters = []
                     single_batter = []
                     single_batter.append(
                         b.contents[0].attrs['data-append-csv'])
@@ -60,12 +66,14 @@ def getBattingStats():
                             single_batter.append(b.contents[i].contents[0])
                         else:
                             single_batter.append("none")
-                    all_batters.append(single_batter)
+                    one_team_batters.append(single_batter)
+    all_batters.append(one_team_batters)
     return all_batters
 
 
 def getPitchingStats():
     all_pitchers = []
+    one_team_pitchers = []
     baseball_table_pitcher_stats = soup.find_all('tr')
     for b in baseball_table_pitcher_stats:
         # 1st layer filter
@@ -74,6 +82,9 @@ def getPitchingStats():
             if('data-stat' in b.contents[0].attrs and b.contents[0].attrs['data-stat'] == 'player'):
                 # filter for batting against team totals and pitching
                 if('data-append-csv' in b.contents[0].attrs and b.contents[1].attrs['data-stat'] == 'IP'):
+                    if(b.contents[0].attrs['csk'] == '0' and len(one_team_pitchers) > 0):
+                        all_pitchers.append(one_team_pitchers.copy())
+                        one_team_pitchers = []
                     single_pitcher = []
                     single_pitcher.append(
                         b.contents[0].attrs['data-append-csv'])
@@ -90,7 +101,8 @@ def getPitchingStats():
                             single_pitcher.append(b.contents[i].contents[0])
                         else:
                             single_pitcher.append("none")
-                    all_pitchers.append(single_pitcher)
+                    one_team_pitchers.append(single_pitcher)
+    all_pitchers.append(one_team_pitchers)
     return all_pitchers
 
 
@@ -120,8 +132,11 @@ def getStartingLineups():
     lineups_temp = [x for x in lineups_temp if x != []]
     for x in range(0, len(lineups_temp)):
         if(lineups_temp[x][0] == '9'):
-            lineups_final.append(lineups_temp[:x+1])
-            lineups_final.append(lineups_temp[x+1:])
+            adj = 0
+            if(lineups_temp[x+1][0] == ' '):
+                adj = 1
+            lineups_final.append(lineups_temp[:x+1+adj])
+            lineups_final.append(lineups_temp[x+1+adj:])
             break
     return lineups_final
 
@@ -162,24 +177,9 @@ def getPreviousAndNextGameURLs():
 def getScoreboxMeta():
     metaInfo = []
     meta_info_state = soup.find_all(class_='scorebox_meta')
-    metaInfo.append(meta_info_state[0].contents[1].text.split(',')[
-                    0])  # day of week
-    metaInfo.append(meta_info_state[0].contents[1].text.split(',')[
-                    1])  # month and day
-    metaInfo.append(meta_info_state[0].contents[1].text.split(',')[
-                    2])  # year
-    metaInfo.append(
-        meta_info_state[0].contents[2].text.split(':', 1)[1].strip().split(' ')[0])  # time
-    metaInfo.append(
-        meta_info_state[0].contents[2].text.split(':', 1)[1].strip().split(' ')[1])  # time
-    metaInfo.append(meta_info_state[0].contents[3].text.split(':')[
-                    1].replace(',', ''))  # attendance
-    metaInfo.append(meta_info_state[0].contents[4].text.split(':')[1])  # field
-    metaInfo.append(meta_info_state[0].contents[5].text.split(
-        ':', 1)[1])  # game duration
-    # night/day game, field type
-    metaInfo.append(meta_info_state[0].contents[6].text.split(',')[0])
-    metaInfo.append(meta_info_state[0].contents[6].text.split(',')[1])
+    for x in meta_info_state[0].contents:
+        if(hasattr(x, 'contents')):
+            metaInfo.append(x.text)
     for x in range(0, len(metaInfo)):
         metaInfo[x] = metaInfo[x].strip()
     return metaInfo
@@ -196,31 +196,75 @@ def getUmpires():
 
 
 def getStartTimeWeather():
-    startWeather = []
     weather_info_stats = soup.find_all(class_='section_content')
-    weatherLen = len(weather_info_stats[2].contents[6].contents[1].split(','))
-    for x in range(0, weatherLen):
-        startWeather.append(
-            weather_info_stats[2].contents[6].contents[1].split(',')[x].replace('.', '').strip())
-    startWeather[0] = re.findall(r'\d+', startWeather[0])[0]
-    startWeather.append(re.findall(r'\d+', startWeather[1])[0])
-    return startWeather
+    for x in range(0, len(weather_info_stats[2].contents)):
+        if(hasattr(weather_info_stats[2].contents[x], "content") and "Weather" in weather_info_stats[2].contents[x].text):
+            return weather_info_stats[2].contents[x].text
     #startWeatherLen = len(weather_info_stats)
 
 
-r = requests.get(
-    'https://www.baseball-reference.com/boxes/SLN/SLN201804080.shtml')
-print(r.ok)
-print(r.status_code)
+def saveFileToCSV(fileLocation, tag, data):
+    with open(fileLocation, "w+", newline='') as f:
+        wr = csv.writer(f)
+        wr.writerow([tag])
+        wr.writerows(data)
 
-# http://www.parkfactors.com/MLW
-comments_removed_text = (r.text.replace('<!--', '')).replace('-->', '')
-soup = BeautifulSoup(comments_removed_text, 'html.parser')
-print(getTeamsAndScores())
-print(getPreviousAndNextGameURLs())
-print(getScoreboxMeta())
-print(getUmpires())
-print(getStartTimeWeather())
-print(getBattingStats())
-print(getPitchingStats())
-print(getStartingLineups())
+
+def addToErrorFile(databaseLocation, urlName):
+    with open(databaseLocation + "errors/readErrors.csv", "a+", newline='') as f:
+        wr = csv.writer(f)
+        wr.writerow([urlName])
+
+
+databaseLocation = "D:/Baseball/Database/"
+
+all_text_file_info = []
+with open('gameURLsOrganizedFrom1998to2015.csv', 'r') as f:
+    reader = csv.reader(f)
+    all_text_file_info = list(reader)
+all_text_file_info
+counter = 0
+for x in all_text_file_info:
+    counter += 1
+    baseball_reference_static = 'https://www.baseball-reference.com'
+    request_string = baseball_reference_static + x[2]
+    print(str(counter) + ": " + request_string)
+    try:
+        r = requests.get(
+            request_string)
+        # print(r.ok)
+        # print(r.status_code)
+        # http://www.parkfactors.com/MLW
+        comments_removed_text = (
+            r.text.replace('<!--', '')).replace('-->', '')
+        soup = BeautifulSoup(comments_removed_text, 'html.parser')
+        teamAndScores = getTeamsAndScores()
+        previousAndNextGameURLs = getPreviousAndNextGameURLs()
+        for z in range(0, len(previousAndNextGameURLs)):
+            teamAndScores[z].append(previousAndNextGameURLs[z][0])
+            teamAndScores[z].append(previousAndNextGameURLs[z][1])
+        meta = getScoreboxMeta()
+        umpires = getUmpires()
+        startTimeWeather = getStartTimeWeather()
+        battingStats = getBattingStats()
+        pitchingStats = getPitchingStats()
+        startingLineups = getStartingLineups()
+        fileNameBase = request_string.split('/')[5].split('.')[0]
+        # print(fileNameBase)
+        saveFileToCSV(databaseLocation + "teamAndScores/" + fileNameBase +
+                      "_teamAndScores.csv", x[2], teamAndScores)
+        saveFileToCSV(databaseLocation + "Meta/" + fileNameBase +
+                      "_meta.csv", x[2], [meta])
+        saveFileToCSV(databaseLocation + "Umpires/" + fileNameBase +
+                      "_umpires.csv", x[2], [umpires])
+        saveFileToCSV(databaseLocation + "Weather/" + fileNameBase +
+                      "_weather.csv", x[2], [startTimeWeather])
+        saveFileToCSV(databaseLocation + "startingLineups/" + fileNameBase +
+                      "_startingLineups.csv", x[2], startingLineups)
+        saveFileToCSV(databaseLocation + "Pitching/" + fileNameBase +
+                      "_pitching.csv", x[2], pitchingStats)
+        saveFileToCSV(databaseLocation + "Batting/" + fileNameBase +
+                      "_batting.csv", x[2], battingStats)
+    except:
+        addToErrorFile(databaseLocation, request_string)
+    time.sleep(3.5)
