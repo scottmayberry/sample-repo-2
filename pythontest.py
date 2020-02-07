@@ -236,8 +236,8 @@ for x in all_text_file_info:
     try:
         r = requests.get(
             request_string)
-        print(r.ok)
-        print(r.status_code)
+        # print(r.ok)
+        # print(r.status_code)
         # http://www.parkfactors.com/MLW
         comments_removed_text = (
             r.text.replace('<!--', '')).replace('-->', '')
