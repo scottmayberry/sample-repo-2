@@ -230,7 +230,7 @@ for x in all_text_file_info:
     counter += 1
     baseball_reference_static = 'https://www.baseball-reference.com'
     request_string = baseball_reference_static + x[2]
-    #request_string = "https://www.baseball-reference.com/boxes/SEA/SEA199803310.shtml"
+    request_string = "https://www.baseball-reference.com/boxes/NYN/NYN201008250.shtml"
     print(str(counter) + ": " + request_string)
     request_time = time.time()
     try:
@@ -275,6 +275,7 @@ for x in all_text_file_info:
             f.writelines(comments_removed_text)
     except:
         addToErrorFile(databaseLocation, request_string)
+        print("error")
     time_in_between_read = time.time() - request_time
     if(time_in_between_read < delay_time):
         time.sleep(delay_time - math.floor(time_in_between_read))
